@@ -3,6 +3,7 @@
 import argparse
 import json
 import os
+import sys
 
 from mininet.log import setLogLevel
 
@@ -47,6 +48,8 @@ def main():
                         help='create block profiles')
     parser.add_argument('--pprof-mutex', action=argparse.BooleanOptionalAction,
                         help='create mutex profiles')
+    parser.add_argument('--repeat', default='1', type=int,
+                        help='times test will be executed')
     args = parser.parse_args()
 
     print(args)
@@ -58,43 +61,50 @@ def main():
     dst = args.output
     base_out_dir = args.dir
 
-    count = 0
-    for k, v in enumerate(data):
-        if int(k) not in chosen_tests:
-            continue
+    if (not os.path.exists(src) and src != 'videotestsrc'):
+        print("source file does not exist: " + src, file=sys.stderr)
+        exit(1)
 
-        out_dir = os.path.join(base_out_dir, str(k))
-        implementation = Implementation(
-            k,
-            v.get('description'),
-            v.get('sender'),
-            v.get('receiver'),
-            v.get('transport'),
-            v.get('rtp-cc'),
-            v.get('quic-cc'),
-            v.get('rtcp-feedback', 'none'),
-            v.get('sender-rfc8888', False),
-            v.get('stream', False),
-            out_dir,
-            src,
-            dst,
-            args.pprof_cpu,
-            args.pprof_goroutine,
-            args.pprof_heap,
-            args.pprof_allocs,
-            args.pprof_block,
-            args.pprof_mutex,
-        )
-        tc = VariableAvailableCapacitySingleFlow(implementation, out_dir)
-        ok = tc.run()
-        if not ok:
-            print('failed to run test: {}: {}, stopping execution'
-                  .format(count, k))
-            break
-        count += 1
+    for rep in range(1, args.repeat+1):
+        count = 0
+        for k, v in enumerate(data):
+            if int(k) not in chosen_tests:
+                continue
 
-    print()
-    print('finished {} out of {} test runs'.format(count, len(data)))
+            out_dir = os.path.join(base_out_dir, str(k)+"-" + str(rep))
+
+            implementation = Implementation(
+                k,
+                v.get('description'),
+                v.get('sender'),
+                v.get('receiver'),
+                v.get('transport'),
+                v.get('rtp-cc'),
+                v.get('quic-cc'),
+                v.get('rtcp-feedback', 'none'),
+                v.get('sender-rfc8888', False),
+                v.get('stream', False),
+                out_dir,
+                src,
+                dst,
+                args.pprof_cpu,
+                args.pprof_goroutine,
+                args.pprof_heap,
+                args.pprof_allocs,
+                args.pprof_block,
+                args.pprof_mutex,
+            )
+            tc = VariableAvailableCapacitySingleFlow(implementation, out_dir)
+            ok = tc.run()
+            if not ok:
+                print('failed to run test: {}: {}, stopping execution'
+                    .format(count, k))
+                break
+            count += 1
+
+        print()
+        print('rep {}/{}: finished {} out of {} test runs'
+              .format(rep, args.repeat, count, len(data)))
 
 
 if __name__ == "__main__":
