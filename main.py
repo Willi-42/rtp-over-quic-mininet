@@ -7,8 +7,7 @@ import sys
 
 from mininet.log import setLogLevel
 
-from testcases import Implementation, VariableAvailableCapacitySingleFlow
-
+from testcases import Implementation, VariableAvailableCapacitySingleFlow, TESTCASE_CONST_BW, TESTCASE_VARIABLE_BW
 
 def main():
     with open('./implementations.json') as json_file:
@@ -50,6 +49,9 @@ def main():
                         help='create mutex profiles')
     parser.add_argument('--repeat', default='1', type=int,
                         help='times test will be executed')
+    parser.add_argument('--type', default=TESTCASE_CONST_BW,
+                        choices=[TESTCASE_CONST_BW, TESTCASE_VARIABLE_BW],
+                        help='type of test bandwidth')
     args = parser.parse_args()
 
     print(args)
@@ -87,6 +89,7 @@ def main():
                 out_dir,
                 src,
                 dst,
+                args.type,
                 args.pprof_cpu,
                 args.pprof_goroutine,
                 args.pprof_heap,

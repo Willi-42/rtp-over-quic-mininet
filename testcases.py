@@ -13,6 +13,8 @@ from mininet.util import pmonitor, dumpNodeConnections
 
 from topology import DumbbellTopo
 
+TESTCASE_CONST_BW = "const"
+TESTCASE_VARIABLE_BW = "variable"
 
 class Implementation:
     name: str
@@ -34,6 +36,7 @@ class Implementation:
     allocs_profile: bool
     block_profile: bool
     mutex_profile: bool
+    bandwidth_type: str
 
     def __init__(self,
                  name: str,
@@ -49,6 +52,7 @@ class Implementation:
                  out_dir: str,
                  input: str,
                  output: str,
+                 bandwidth_type: str,
                  cpu_profile: bool = False,
                  goroutine_profile: bool = False,
                  heap_profile: bool = False,
@@ -69,6 +73,7 @@ class Implementation:
         self.out_dir = out_dir
         self.input = input
         self.output = output
+        self.bandwidth_type = bandwidth_type
 
         self.cpu_profile = cpu_profile
         self.goroutine_profile = goroutine_profile
@@ -198,13 +203,14 @@ class VariableAvailableCapacitySingleFlow():
 
     def start_traffic_control(self, s1, s2):
         reference = 1.0
-        tc_config = [
-                {'start_time': 0, 'ratio': 1.0},
-                {'start_time': 40, 'ratio': 2.5},
-                {'start_time': 60, 'ratio': 0.6},
-                {'start_time': 80, 'ratio': 1.0},
-                {'start_time': 100, 'ratio': 1.0},
-                ]
+
+        tc_config = [{'start_time': 0, 'ratio': 1.0},]
+
+        if (self.implementation.bandwidth_type == TESTCASE_VARIABLE_BW):
+            tc_config.extend( [{'start_time': 40, 'ratio': 2.5},
+                 {'start_time': 60, 'ratio': 0.6},
+                 {'start_time': 80, 'ratio': 1.0},
+                 {'start_time': 100, 'ratio': 1.0},])
 
         is_first = True
         for c in tc_config:
