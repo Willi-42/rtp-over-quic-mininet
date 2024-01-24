@@ -8,8 +8,10 @@ from time import time, localtime, strftime
 from threading import Timer
 
 from mininet.clean import cleanup
+from mininet.log import setLogLevel, info
 from mininet.net import Mininet
 from mininet.util import pmonitor, dumpNodeConnections
+from mininet.cli import CLI
 
 from topology import DumbbellTopo
 
@@ -37,6 +39,7 @@ class Implementation:
     block_profile: bool
     mutex_profile: bool
     bandwidth_type: str
+    data: bool
 
     def __init__(self,
                  name: str,
@@ -53,6 +56,7 @@ class Implementation:
                  input: str,
                  output: str,
                  bandwidth_type: str,
+                 data: bool,
                  cpu_profile: bool = False,
                  goroutine_profile: bool = False,
                  heap_profile: bool = False,
@@ -74,6 +78,7 @@ class Implementation:
         self.input = input
         self.output = output
         self.bandwidth_type = bandwidth_type
+        self.data = data
 
         self.cpu_profile = cpu_profile
         self.goroutine_profile = goroutine_profile
@@ -267,6 +272,13 @@ class VariableAvailableCapacitySingleFlow():
             popens = {}
             popens[h1] = h1.popen(send_cmd, stderr=PIPE, stdout=PIPE)
             popens[h2] = h2.popen(receive_cmd, stderr=PIPE, stdout=PIPE)
+
+            if (self.implementation.data):
+                print("start iperf process")
+                h2.cmd('iperf3 -s -p 7575 -1 &')
+                h1.cmd('iperf3 -c {} -p 7575 -t 60 -C cubic &'.format(h2.IP()))
+
+            # CLI(net)
 
             for h, line in pmonitor(popens, timeoutms=1000):
                 t = time()

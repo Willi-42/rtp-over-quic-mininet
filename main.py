@@ -52,6 +52,9 @@ def main():
     parser.add_argument('--type', default=TESTCASE_CONST_BW,
                         choices=[TESTCASE_CONST_BW, TESTCASE_VARIABLE_BW],
                         help='type of test bandwidth')
+    parser.add_argument('--data', action='store_true',
+                        help='send data in opposit direction')
+
     args = parser.parse_args()
 
     print(args)
@@ -90,6 +93,7 @@ def main():
                 src,
                 dst,
                 args.type,
+                args.data,
                 args.pprof_cpu,
                 args.pprof_goroutine,
                 args.pprof_heap,

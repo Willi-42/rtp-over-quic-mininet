@@ -5,6 +5,8 @@ import json
 from os import listdir
 from os.path import isfile, join
 import statistics
+import pandas as pd
+import matplotlib.pyplot as plt
 
 from plot import read_rtp, read_capacity
 
@@ -33,7 +35,7 @@ def calc_utilization(folder, testcase):
         capacity[index.round(freq='S')] = row['bandwidth']
 
     results = []
-    cur_bandwidth = 0
+    cur_bandwidth = 1000000 # TODO: rtp data sometimes starts at :01
     i = 0
     
     for index, row in receiver_rtp.iterrows():
@@ -43,6 +45,8 @@ def calc_utilization(folder, testcase):
         if (i <= 20): # skip startup phase
             i+= 1
             continue
+
+        # print('{}, {}, {}'.format(index, row['rate'], cur_bandwidth))
 
         results.append(row['rate']/cur_bandwidth)
 
@@ -56,6 +60,8 @@ def main():
             formatter_class=argparse.ArgumentDefaultsHelpFormatter
         )
     parser.add_argument('--folder', default='', help='base folder')
+    parser.add_argument('--plot', action='store_true',
+                        help='plots a boxplot')
 
     args = parser.parse_args()
 
@@ -76,11 +82,18 @@ def main():
         if (count > 0):
             # avg
             avg = statistics.mean(results)
-            print('test {}, {} reps: {}'.format(testcase, count, avg))
+            print('test {} reps {}: {}'.format(testcase, count, avg))
 
             # mean
             mean = statistics.median_high(results)
             print("median: ", mean)
+
+            # boxplot
+            if (args.plot):
+                boxplot_data = pd.DataFrame(results, columns=['bw'])
+                boxplot_data['bw'].plot(kind='box', title='utilization')
+                plt.savefig(join(args.folder, 'boxplot.png'))
+                # plt.show() 
  
 
 if __name__ == "__main__":
