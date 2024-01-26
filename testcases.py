@@ -163,13 +163,13 @@ def update_link(i1, i2, bw, is_first, log):
         print('found interfaces: {}, {}'.format(i1, i2))
         t = int(time() * 1000)
         for i in [i1, i2]:
-            qdisc_cmd = 'tc qdisc {} dev {} root handle 1: tbf rate {}Mbit burst 15000 latency {}'.format(
+            qdisc_cmd = 'tc qdisc {} dev {} parent 1: handle 2: tbf rate {}Mbit burst 15000 latency {}'.format(
                         'add' if is_first else 'change',
                         i,
                         bw,
                         '300ms',
                     )
-            netem_cmd = 'tc qdisc {} dev {} parent 1: handle 2: netem delay {} loss {}'.format(
+            netem_cmd = 'tc qdisc {} dev {} root handle 1: netem delay {} loss {}'.format(
                         'add' if is_first else 'change',
                         i,
                         '50ms',
@@ -177,8 +177,8 @@ def update_link(i1, i2, bw, is_first, log):
                     )
             print('run cmd: {}'.format(qdisc_cmd))
             print('run cmd: {}'.format(netem_cmd))
-            subprocess.run(qdisc_cmd.split(' '))
             subprocess.run(netem_cmd.split(' '))
+            subprocess.run(qdisc_cmd.split(' '))
         with open(log, 'a') as f:
             f.write('{}, {}\n'.format(t, bw * 1_000_000))
 
