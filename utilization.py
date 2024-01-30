@@ -2,22 +2,40 @@
 
 import argparse
 import json
+import numpy
 from os import listdir
 from os.path import isfile, join
 import statistics
 import pandas as pd
 import matplotlib.pyplot as plt
 
-from plot import read_rtp, read_capacity
+from plot import read_rtp, read_capacity, read_cc_qdelay, read_rtp_latency
 
-def calc_utilization(folder, testcase):
-    basetime = 0
+def get_latency(folder, basetime):
+    latency = read_rtp_latency(
+                folder + "/sender_rtp.log",
+                folder + "/receiver_rtp.log",
+                basetime,
+            )
+    res = []
+    for index, row in latency.iterrows():
+       res.append(row['diff'])
 
-    # get base time
-    with open(folder + "/config.json") as f:
-        d = json.load(f)
-        basetime = d['basetime']
+    return res
 
+def get_qdelay(folder, basetime):
+    # get bandwidth
+    q_delay = read_cc_qdelay(
+                folder + "/cc.log",
+                basetime,
+            )
+    res = []
+    for index, row in q_delay.iterrows():
+        res.append(row['queue delay'])
+
+    return res
+
+def calc_utilization(folder, basetime):
     # get bandwidth
     receiver_rtp = read_rtp(
                 folder + "/receiver_rtp.log",
@@ -41,17 +59,14 @@ def calc_utilization(folder, testcase):
     for index, row in receiver_rtp.iterrows():
         if index.round(freq='S') in capacity:
             cur_bandwidth = capacity[index.round(freq='S')]
-        
+
         if (i <= 20): # skip startup phase
             i+= 1
             continue
 
-        # print('{}, {}, {}'.format(index, row['rate'], cur_bandwidth))
-
         results.append(row['rate']/cur_bandwidth)
 
     res = statistics.mean(results)
-    print('{};{}'.format(testcase, res))
 
     return res
 
@@ -69,6 +84,8 @@ def main():
 
     for testcase in range(8): # per test case
         results = []
+        qdelay_res = []
+        latency_res = []
         count = 0
 
         for f in listdir(args.folder): # find all reptitions
@@ -76,21 +93,42 @@ def main():
             # check if it is a folder and has correct name
             if not isfile(join(args.folder, f)) and f.startswith(str(testcase)):
                 count += 1
-                res = calc_utilization(join(args.folder, f), count)
+                folder = join(args.folder, f)
+
+                # get base time
+                with open(folder + "/config.json") as f:
+                    d = json.load(f)
+                    basetime = d['basetime']
+
+                res = calc_utilization(folder, basetime)
+                qdelay = get_qdelay(folder, basetime)
+                latency= get_latency(folder, basetime)
+
+                print('{:d};{:0.2f}'.format(count, res))
+
                 results.append(res)
+                qdelay_res.extend(qdelay)
+                latency_res.extend(latency)
 
         if (count > 0):
-            # avg
-            avg = statistics.mean(results)
-            print('test {} reps {}: {}'.format(testcase, count, avg))
+            print('test {:d} reps {:d}'.format(testcase, count))
 
-            # mean
-            mean = statistics.median_high(results)
-            print("median: ", mean)
+            avg = statistics.mean(results)
+            median = statistics.median_high(results)
+            stdev = numpy.std(results)
+
+            print('utilization: avg: {:0.5f}; median: {:0.5f}; stdev {:0.5f}'
+                  .format(avg, median, stdev))
+
+            print('qdaly avg: {:0.5f}; {:0.5f}; {:0.5f}'.format(statistics.mean(qdelay_res),
+                  numpy.std(qdelay_res), numpy.percentile(qdelay_res, 97)))
+
+            print("latency avg: {:0.5f}; {:0.5f}".format(statistics.mean(latency_res),
+                  numpy.percentile(latency_res, 97)))
 
             # boxplot
             if (args.plot):
-                boxplot_data = pd.DataFrame(results, columns=['bw'])
+                boxplot_data = pd.DataFrame(latency_res, columns=['bw'])
                 boxplot_data['bw'].plot(kind='box', title='utilization')
                 plt.savefig(join(args.folder, 'boxplot.png'))
                 # plt.show() 
