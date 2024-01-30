@@ -19,7 +19,8 @@ def get_latency(folder, basetime):
             )
     res = []
     for index, row in latency.iterrows():
-       res.append(row['diff'])
+       latency_ms = row['diff'] * 1000
+       res.append(latency_ms)
 
     return res
 
@@ -31,7 +32,8 @@ def get_qdelay(folder, basetime):
             )
     res = []
     for index, row in q_delay.iterrows():
-        res.append(row['queue delay'])
+        q_delay_ms = row['queue delay'] * 1000
+        res.append(q_delay_ms)
 
     return res
 
@@ -111,19 +113,20 @@ def main():
                 latency_res.extend(latency)
 
         if (count > 0):
-            print('test {:d} reps {:d}'.format(testcase, count))
+            print('---')
+            print('test {:d}, {:d} reps'.format(testcase, count))
 
             avg = statistics.mean(results)
             median = statistics.median_high(results)
             stdev = numpy.std(results)
 
-            print('utilization: avg: {:0.5f}; median: {:0.5f}; stdev {:0.5f}'
+            print('utilization: avg: {:0.4f}; median: {:0.4f}; stdev {:0.4f}'
                   .format(avg, median, stdev))
 
-            print('qdaly avg: {:0.5f}; {:0.5f}; {:0.5f}'.format(statistics.mean(qdelay_res),
+            print('qdaly:   avg: {:0.2f}; stdev: {:0.2f}; 97%-tile: {:0.2f}'.format(statistics.mean(qdelay_res),
                   numpy.std(qdelay_res), numpy.percentile(qdelay_res, 97)))
 
-            print("latency avg: {:0.5f}; {:0.5f}".format(statistics.mean(latency_res),
+            print("latency: avg: {:0.2f}; 97%-tile {:0.2f}".format(statistics.mean(latency_res),
                   numpy.percentile(latency_res, 97)))
 
             # boxplot
