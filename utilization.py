@@ -68,9 +68,7 @@ def calc_utilization(folder, basetime):
 
         results.append(row['rate']/cur_bandwidth)
 
-    res = statistics.mean(results)
-
-    return res
+    return results
 
 def main():
     parser = argparse.ArgumentParser(
@@ -79,13 +77,15 @@ def main():
     parser.add_argument('--folder', default='', help='base folder')
     parser.add_argument('--plot', action='store_true',
                         help='plots a boxplot')
+    parser.add_argument('--latex', action='store_true',
+                        help='prints res in latex table row')
 
     args = parser.parse_args()
 
     print("test;utilization")
 
     for testcase in range(8): # per test case
-        results = []
+        utilization_res = []
         qdelay_res = []
         latency_res = []
         count = 0
@@ -102,13 +102,13 @@ def main():
                     d = json.load(f)
                     basetime = d['basetime']
 
-                res = calc_utilization(folder, basetime)
+                utilization = calc_utilization(folder, basetime)
                 qdelay = get_qdelay(folder, basetime)
                 latency= get_latency(folder, basetime)
 
-                print('{:d};{:0.2f}'.format(count, res))
+                print('{:d};{:0.2f}'.format(count, statistics.mean(utilization)))
 
-                results.append(res)
+                utilization_res.extend(utilization)
                 qdelay_res.extend(qdelay)
                 latency_res.extend(latency)
 
@@ -116,18 +116,31 @@ def main():
             print('---')
             print('test {:d}, {:d} reps'.format(testcase, count))
 
-            avg = statistics.mean(results)
-            median = statistics.median_high(results)
-            stdev = numpy.std(results)
+            util_avg = statistics.mean(utilization_res)
+            util_median = statistics.median_high(utilization_res)
+            util_stdev = numpy.std(utilization_res)
+
+            qdelay_avg = statistics.mean(qdelay_res)
+            qdelay_stdev = numpy.std(qdelay_res)
+            qdelay_ptile = numpy.percentile(qdelay_res, 97)
+
+            latency_avg = statistics.mean(latency_res)
+            latency_stdev = numpy.std(latency_res)
+            latency_ptile = numpy.percentile(latency_res, 97)
 
             print('utilization: avg: {:0.4f}; median: {:0.4f}; stdev {:0.4f}'
-                  .format(avg, median, stdev))
+                  .format(util_avg, util_median, util_stdev))
 
-            print('qdaly:   avg: {:0.2f}; stdev: {:0.2f}; 97%-tile: {:0.2f}'.format(statistics.mean(qdelay_res),
-                  numpy.std(qdelay_res), numpy.percentile(qdelay_res, 97)))
+            print('qdaly:   avg: {:0.2f}; stdev: {:0.2f}; 97%-tile: {:0.2f}'
+                  .format(qdelay_avg, qdelay_stdev, qdelay_ptile))
 
-            print("latency: avg: {:0.2f}; 97%-tile {:0.2f}".format(statistics.mean(latency_res),
-                  numpy.percentile(latency_res, 97)))
+            print("latency: avg: {:0.2f}; stdev: {:0.2f}; 97%-tile {:0.2f}"
+                  .format(latency_avg, latency_stdev, latency_ptile))
+
+            if (args.latex):
+                print("? & {:0.1f}\% & {:0.1f} & {:0.1f} & {:0.1f} & {:0.1f} & {:0.1f} & {:0.1f} & {:0.1f}\\\\"
+                      .format(util_avg*100, util_stdev*100, latency_avg, latency_stdev, latency_ptile,
+                              qdelay_avg, qdelay_stdev, qdelay_ptile))
 
             # boxplot
             if (args.plot):
