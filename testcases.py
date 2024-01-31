@@ -3,7 +3,7 @@ import os
 import subprocess
 
 from pathlib import Path
-from subprocess import TimeoutExpired, PIPE
+from subprocess import STDOUT, TimeoutExpired, PIPE
 from time import time, localtime, strftime
 from threading import Timer
 
@@ -263,15 +263,20 @@ class VariableAvailableCapacitySingleFlow():
             self.dump_config(start)
             self.start_traffic_control(s1, s2)
 
-            send_cmd = self.implementation.receive_cmd(h1.IP(), "4242")
-            receive_cmd = self.implementation.send_cmd(h1.IP(), "4242")
+            receive_cmd = self.implementation.receive_cmd(h1.IP(), "4242")
+            send_cmd = self.implementation.send_cmd(h1.IP(), "4242")
 
             print(' '.join(send_cmd))
             print(' '.join(receive_cmd))
 
+            sender_log_path = os.path.join(self.out_dir, 'sender_out.txt')
+            receiver_log_path = os.path.join(self.out_dir, 'receiver_out.txt')
+            sender_log = open(sender_log_path, "w")
+            receiver_log = open(receiver_log_path, "w")
+
             popens = {}
-            popens[h1] = h1.popen(send_cmd, stderr=PIPE, stdout=PIPE)
-            popens[h2] = h2.popen(receive_cmd, stderr=PIPE, stdout=PIPE)
+            popens[h1] = h1.popen(receive_cmd, stderr=sender_log, stdout=PIPE)
+            popens[h2] = h2.popen(send_cmd, stderr=receiver_log, stdout=PIPE)
 
             if (self.implementation.data):
                 print("start iperf process")
@@ -307,6 +312,8 @@ class VariableAvailableCapacitySingleFlow():
                 except TimeoutExpired:
                     p.kill()
                     print('killed {}'.format(p))
+            sender_log.close()
+            receiver_log.close()
             net.stop()
             self.stop_traffic_control()
             cleanup()
