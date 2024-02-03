@@ -275,13 +275,13 @@ class VariableAvailableCapacitySingleFlow():
             receiver_log = open(receiver_log_path, "w")
 
             popens = {}
-            popens[h1] = h1.popen(receive_cmd, stderr=sender_log, stdout=PIPE)
-            popens[h2] = h2.popen(send_cmd, stderr=receiver_log, stdout=PIPE)
+            popens[h1] = h1.popen(receive_cmd, stderr=receiver_log, stdout=PIPE)
+            popens[h2] = h2.popen(send_cmd, stderr=sender_log, stdout=PIPE)
 
             if (self.implementation.data):
                 print("start iperf process")
                 h2.cmd('iperf3 -s -p 7575 -1 &')
-                h1.cmd('iperf3 -c {} -p 7575 -t 60 -C cubic &'.format(h2.IP()))
+                h1.cmd('iperf3 -c {} -p 7575 -t 100 -C cubic &'.format(h2.IP()))
 
             # CLI(net)
 
