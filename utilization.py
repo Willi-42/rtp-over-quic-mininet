@@ -9,14 +9,18 @@ import statistics
 import pandas as pd
 import matplotlib.pyplot as plt
 
-from plot import read_rtp, read_capacity, read_cc_qdelay, read_rtp_latency
+from plot import read_rtp, read_capacity, read_cc_qdelay, read_rtp_latency, read_cc_all
 
-def get_latency(folder, basetime):
+def get_latency(folder, basetime, plot):
     latency = read_rtp_latency(
                 folder + "/sender_rtp.log",
                 folder + "/receiver_rtp.log",
                 basetime,
             )
+    if (plot):
+        latency.plot(y='diff', title='latency')
+        plt.savefig(join(folder, 'latency.png'))
+
     res = []
     for index, row in latency.iterrows():
        latency_ms = row['diff'] * 1000
@@ -90,12 +94,12 @@ def main():
         latency_res = []
         count = 0
 
-        for f in listdir(args.folder): # find all reptitions
+        for f_name in listdir(args.folder): # find all reptitions
 
             # check if it is a folder and has correct name
-            if not isfile(join(args.folder, f)) and f.startswith(str(testcase)):
+            if not isfile(join(args.folder, f_name)) and f_name.startswith(str(testcase)):
                 count += 1
-                folder = join(args.folder, f)
+                folder = join(args.folder, f_name)
 
                 # get base time
                 with open(folder + "/config.json") as f:
@@ -104,13 +108,26 @@ def main():
 
                 utilization = calc_utilization(folder, basetime)
                 qdelay = get_qdelay(folder, basetime)
-                latency= get_latency(folder, basetime)
+                latency= get_latency(folder, basetime, args.plot)
 
-                print('{:d};{:0.2f}'.format(count, statistics.mean(utilization)))
+                print('{:s}; {:0.2f}'
+                      .format(f_name, statistics.mean(utilization)))
 
                 utilization_res.extend(utilization)
                 qdelay_res.extend(qdelay)
                 latency_res.extend(latency)
+
+                if (args.plot):
+                    data = read_cc_all(folder + "/cc.log", basetime)
+
+                    data.plot(y='bytesInFlightLog', title='bytesInFligth')
+                    plt.savefig(join(folder, 'bytesInFligth.png'))
+
+                    data.plot(y='cwnd', title='cwnd')
+                    plt.savefig(join(folder, 'cwnd.png'))
+
+                    data.plot(y='queue delay', title='queue delay')
+                    plt.savefig(join(folder, 'qdelay.png'))
 
         if (count > 0):
             print('---')
@@ -142,13 +159,6 @@ def main():
                       .format(util_avg*100, util_stdev*100, latency_avg, latency_stdev, latency_ptile,
                               qdelay_avg, qdelay_stdev, qdelay_ptile))
 
-            # boxplot
-            if (args.plot):
-                boxplot_data = pd.DataFrame(latency_res, columns=['bw'])
-                boxplot_data['bw'].plot(kind='box', title='utilization')
-                plt.savefig(join(args.folder, 'boxplot.png'))
-                # plt.show() 
- 
 
 if __name__ == "__main__":
     main()
