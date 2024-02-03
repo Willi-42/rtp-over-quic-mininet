@@ -104,6 +104,20 @@ def read_cc_qdelay(file, basetime):
     df.index = pd.to_datetime(df.index - basetime, unit='ms')
     return df
 
+def read_cc_all(file, basetime):
+    df = pd.read_csv(
+            file,
+            index_col=0,
+            names=['time', 'queue delay', 'cwnd', 'bytesInFlightLog'],
+            header=None,
+            usecols=[0, 2, 4, 5]
+        )
+
+    if not basetime:
+        basetime = df.index[0]
+
+    df.index = pd.to_datetime(df.index - basetime, unit='ms')
+    return df
 
 def read_cc_target_rate(file, basetime):
     df = pd.read_csv(
