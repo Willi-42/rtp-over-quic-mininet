@@ -18,7 +18,17 @@ def get_ack_delay(file):
 
     return ack_delays
 
+def get_all_qlogs(base_folder, name):
+    qlogs = []
+    for f_name in listdir(base_folder): # find testcase folders
 
+        if not isfile(join(base_folder, f_name)):
+            folder = join(base_folder, f_name)
+
+            for file in listdir(folder): # find qlog file
+                if (file.endswith(name)):
+                    qlogs.append(join(folder, file))
+    return qlogs
 
 def main():
     parser = argparse.ArgumentParser(
@@ -29,16 +39,10 @@ def main():
     args = parser.parse_args()
     ack_delays = []
 
-    for f_name in listdir(args.folder): # find all reptitions
-
-        # check if it is a folder and has correct name
-        if not isfile(join(args.folder, f_name)):
-            folder = join(args.folder, f_name)
-
-            for file in listdir(folder): # find qlog file
-                if (file.endswith("Server.qlog")):
-                    with open(join(folder, file)) as f:
-                        ack_delays.extend(get_ack_delay(f))
+    qlogs = get_all_qlogs(args.folder, "Server.qlog")
+    for log in qlogs:
+        with open(log) as f:
+            ack_delays.extend(get_ack_delay(f))
 
 
     avg = statistics.mean(ack_delays)

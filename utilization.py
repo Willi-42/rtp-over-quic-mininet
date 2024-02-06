@@ -9,6 +9,7 @@ import statistics
 import pandas as pd
 import matplotlib.pyplot as plt
 
+from calc_quic_latency import get_quic_latency
 from plot import read_rtp, read_capacity, read_cc_qdelay, read_rtp_latency, read_cc_all
 
 def get_latency(folder, basetime, plot):
@@ -74,6 +75,14 @@ def calc_utilization(folder, basetime):
 
     return results
 
+def print_res(name, results):
+    avg = statistics.mean(results)
+    stdev = numpy.std(results)
+    ptile = numpy.percentile(results, 97)
+ 
+    print('{:12s}: avg: {:0.2f}; stdev: {:0.2f}; 97%-tile: {:0.2f}'
+                  .format(name, avg, stdev, ptile))
+
 def main():
     parser = argparse.ArgumentParser(
             formatter_class=argparse.ArgumentDefaultsHelpFormatter
@@ -83,6 +92,8 @@ def main():
                         help='plots a boxplot')
     parser.add_argument('--latex', action='store_true',
                         help='prints res in latex table row')
+    parser.add_argument('--qlatency', action='store_true',
+                        help='prints quic latency')
 
     args = parser.parse_args()
 
@@ -92,6 +103,7 @@ def main():
         utilization_res = []
         qdelay_res = []
         latency_res = []
+        quic_latency_res = []
         count = 0
 
         for f_name in listdir(args.folder): # find all reptitions
@@ -107,15 +119,20 @@ def main():
                     basetime = d['basetime']
 
                 utilization = calc_utilization(folder, basetime)
+                utilization_res.extend(utilization)
+
                 qdelay = get_qdelay(folder, basetime)
+                qdelay_res.extend(qdelay)
+
                 latency= get_latency(folder, basetime, args.plot)
+                latency_res.extend(latency)
+
+                if (args.qlatency):
+                    quic_latency = get_quic_latency(folder)
+                    quic_latency_res.extend(quic_latency)
 
                 print('{:s}; {:0.2f}'
                       .format(f_name, statistics.mean(utilization)))
-
-                utilization_res.extend(utilization)
-                qdelay_res.extend(qdelay)
-                latency_res.extend(latency)
 
                 if (args.plot):
                     data = read_cc_all(folder + "/cc.log", basetime)
@@ -137,27 +154,20 @@ def main():
             util_median = statistics.median_high(utilization_res)
             util_stdev = numpy.std(utilization_res)
 
-            qdelay_avg = statistics.mean(qdelay_res)
-            qdelay_stdev = numpy.std(qdelay_res)
-            qdelay_ptile = numpy.percentile(qdelay_res, 97)
-
-            latency_avg = statistics.mean(latency_res)
-            latency_stdev = numpy.std(latency_res)
-            latency_ptile = numpy.percentile(latency_res, 97)
-
             print('utilization: avg: {:0.4f}; median: {:0.4f}; stdev {:0.4f}'
                   .format(util_avg, util_median, util_stdev))
 
-            print('qdaly:   avg: {:0.2f}; stdev: {:0.2f}; 97%-tile: {:0.2f}'
-                  .format(qdelay_avg, qdelay_stdev, qdelay_ptile))
+            print_res("qdelay", qdelay_res)
+            print_res("RTP latency", latency_res)
 
-            print("latency: avg: {:0.2f}; stdev: {:0.2f}; 97%-tile {:0.2f}"
-                  .format(latency_avg, latency_stdev, latency_ptile))
+            if (args.qlatency):
+                print_res("QUIC latency", quic_latency_res)
 
-            if (args.latex):
-                print("? & {:0.1f}\% & {:0.1f} & {:0.1f} & {:0.1f} & {:0.1f} & {:0.1f} & {:0.1f} & {:0.1f}\\\\"
-                      .format(util_avg*100, util_stdev*100, latency_avg, latency_stdev, latency_ptile,
-                              qdelay_avg, qdelay_stdev, qdelay_ptile))
+
+            # if (args.latex):
+            #     print("? & {:0.1f}\% & {:0.1f} & {:0.1f} & {:0.1f} & {:0.1f} & {:0.1f} & {:0.1f} & {:0.1f}\\\\"
+            #           .format(util_avg*100, util_stdev*100, latency_avg, latency_stdev, latency_ptile,
+            #                   qdelay_avg, qdelay_stdev, qdelay_ptile))
 
 
 if __name__ == "__main__":

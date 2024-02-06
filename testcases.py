@@ -184,6 +184,17 @@ def update_link(i1, i2, bw, is_first, log):
 
     return update
 
+def print_tc(name, int_name):
+    tc_cmd = 'tc -s -d -j qdisc ls dev {}'.format(int_name)
+    resultByte = subprocess.run(tc_cmd.split(' '), stdout=subprocess.PIPE)
+
+    res = str(resultByte.stdout)[2:-3]
+
+    j = json.loads(res)
+
+    for i in j:
+        print('{}: {}, packets: {}, drops: {}, bytes: {} overlimits: {}'.format(
+              name, i['kind'],i['packets'],i['drops'],i['bytes'],i['overlimits']))
 
 class VariableAvailableCapacitySingleFlow():
     implementation: Implementation
@@ -281,7 +292,8 @@ class VariableAvailableCapacitySingleFlow():
             if (self.implementation.data):
                 print("start iperf process")
                 h2.cmd('iperf3 -s -p 7575 -1 &')
-                h1.cmd('iperf3 -c {} -p 7575 -t 100 -C cubic &'.format(h2.IP()))
+                # h1.cmd('iperf3 -c {} -p 7575 -t 100 -C cubic &'.format(h2.IP()))
+                h1.cmd('iperf3 -c {} -p 7575 -t 100 -u -b 950000 &'.format(h2.IP()))
 
             # CLI(net)
 
@@ -312,6 +324,15 @@ class VariableAvailableCapacitySingleFlow():
                 except TimeoutExpired:
                     p.kill()
                     print('killed {}'.format(p))
+
+            print("----")
+            try:
+                print_tc('reciver TC', 'rs1-eth2')
+                print_tc('sender TC', 'ls1-eth2')
+            except Exception:   
+                print("failure")
+            print("----")
+
             sender_log.close()
             receiver_log.close()
             net.stop()
